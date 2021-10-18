@@ -7,7 +7,7 @@ plot_structure_probability <- function(output, as.BF = TRUE) {
   }
   require("ggplot2")
   
-  tmp <- sort(output$posterior_probability, decreasing = TRUE) #tmp[1] is most plausible
+  tmp <- sort(output$structure$posterior_probability, decreasing = TRUE) #tmp[1] is most plausible
   if(as.BF){
     BF1s <- tmp / tmp[1] # BF best structure vs. others
     data <- data.frame(structures = 1:length(BF1s), BayesFactor = BF1s)
@@ -46,17 +46,17 @@ plot_structure <- function(output, top_n = 3){
          call. = FALSE)
   }
   
-  highest_probs <- tail(sort(output$posterior_probability), top_n)
-  most_probable <- match(highest_probs, output$posterior_probability)
+  highest_probs <- tail(sort(output$structure$posterior_probability), top_n)
+  most_probable <- match(highest_probs, output$structure$posterior_probability)
   
   for(index in most_probable){
-    graph_structure <- vector_to_matrix(output$structures[index, ], output$nodes)
+    graph_structure <- vector_to_matrix(output$structure$structures[index, ], output$nodes)
     diag(graph_structure) <- 1
     
     qgraph::qgraph(graph_structure, layout = "circle", theme = "TeamFortress", 
                    color= c("#f0ae0e"), vsize = 8, repulsion = .9,
                    legend = F, legend.cex = 0.55, 
-                   title = paste("Posterior Probability = ", output$posterior_probability[index])) 
+                   title = paste("Posterior Probability = ", output$structure$posterior_probability[index])) 
   }
 }
 
@@ -68,7 +68,7 @@ plot_edge_BF <- function(output, evidence_thresh = 10) {
          call. = FALSE)
   }
   
-  graph <- vector_to_matrix(output$inc_BF, output$nodes)
+  graph <- vector_to_matrix(output$parameters$inc_BF, output$nodes)
   diag(graph) <- 1
   
   # assign a color to each edge (inclusion - blue, exclusion - red, no conclusion - grey)
@@ -95,10 +95,10 @@ plot_mpm <- function(output, exc_prob = .5) {
   }
   
   
-  graph <- vector_to_matrix(output$sigma_eap, output$nodes, diag = F)
+  graph <- vector_to_matrix(output$parameters$sigma_eap, output$nodes, diag = F)
   
   # Exclude edges with a inclusion probability lower .5
-  inc_probs_m <- vector_to_matrix(output$inclusion_probabilities, output$nodes)
+  inc_probs_m <- vector_to_matrix(output$parameters$inclusion_probabilities, output$nodes)
   graph[inc_probs_m < exc_prob] <- 0
   diag(graph) <- 1
   
@@ -114,7 +114,7 @@ plot_mpm <- function(output, exc_prob = .5) {
 
 plot_parameter_HDI <- function(output, thresholds = F) {
   
-  if(is.null(output$sigma_samples)){
+  if(is.null(output$parameters$sigma_samples)){
     stop("Samples of the posterior distribution required. Set \"output_samples = TRUE\".")
   }
   
@@ -124,8 +124,8 @@ plot_parameter_HDI <- function(output, thresholds = F) {
   }
   require("ggplot2")
   
-  hdi_intervals <- as.data.frame(apply(output$sigma_samples, MARGIN = 2, FUN = hdi_interval))
-  posterior_medians <- apply(output$sigma_samples, MARGIN = 2, FUN = median)
+  hdi_intervals <- as.data.frame(apply(output$parameters$sigma_samples, MARGIN = 2, FUN = hdi_interval))
+  posterior_medians <- apply(output$parameters$sigma_samples, MARGIN = 2, FUN = median)
   
   posterior <- cbind(colnames(hdi_intervals), data.frame(posterior_medians, row.names = NULL), data.frame(t(hdi_intervals), row.names = NULL))
   colnames(posterior) <- c("parameter", "posterior_medians", "lower", "upper")
@@ -156,11 +156,11 @@ plot_parameter_HDI <- function(output, thresholds = F) {
 
 plot_parameter_distribution <- function(output, parameter = c("all")){
   
-  if(is.null(output$sigma_samples)){
+  if(is.null(output$parameters$sigma_samples)){
     stop("Samples of the posterior distribution required. Set \"output_samples = TRUE\".")
   }
   
-  sigma_samples <- output$sigma_samples
+  sigma_samples <- output$parameters$sigma_samples
   par(mfrow = c(2,2))
   
   if(parameter == "sigma") {
