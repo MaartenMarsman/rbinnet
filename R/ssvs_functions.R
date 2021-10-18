@@ -448,45 +448,47 @@ select_structure <- function(x, spike_var, slab_var, theta = 0.5, alpha = 1,
   }
   
   # Prepare output
-  inclusion_probabilities <- gibbs_sample$posterior_probability %*% gibbs_sample$structures
-  gibbs_sample$inclusion_probabilities <- inclusion_probabilities
-  gibbs_sample$inc_BF <- inclusion_probabilities/(1 - inclusion_probabilities)
-  
-  sigma_eap <- gibbs_sample$sigma_eap
+  sigma_eap <- gibbs_sample$parameters$sigma_eap
   index_sigma <- grep('^s', rownames(sigma_eap))
   index_mu <- grep('^m', rownames(sigma_eap))
   
   if(output_samples == TRUE){
-    gibbs_sample$sigma_eap <- sigma_eap[index_sigma, ]
-    gibbs_sample$mu_eap <- sigma_eap[index_mu, ]
+    gibbs_sample$parameters$sigma_eap <- sigma_eap[index_sigma, ]
+    gibbs_sample$parameters$mu_eap <- sigma_eap[index_mu, ]
     
     
-    hdi_intervals <- apply(gibbs_sample$sigma_samples, MARGIN = 2, FUN = hdi_interval)
-    gibbs_sample$sigma_hdi <- hdi_intervals[, index_sigma]
-    gibbs_sample$mu_hdi <- hdi_intervals[, index_mu]
+    hdi_intervals <- apply(gibbs_sample$parameters$sigma_samples, MARGIN = 2, FUN = hdi_interval)
+    gibbs_sample$parameters$sigma_hdi <- hdi_intervals[, index_sigma]
+    gibbs_sample$parameters$mu_hdi <- hdi_intervals[, index_mu]
+    inclusion_probabilities <- gibbs_sample$structure$posterior_probability %*% gibbs_sample$structure$structures
+    gibbs_sample$parameters$inclusion_probabilities <- inclusion_probabilities
+    gibbs_sample$parameters$inc_BF <- inclusion_probabilities/(1 - inclusion_probabilities)
+    
     gibbs_sample$output_overview <- data.frame(
-      #Relation = paste0(indexing(gibbs_sample$p)[, 2], "--", indexing(gibbs_sample$p)[, 3]), 
-      Post.mean = c(gibbs_sample$sigma_eap, gibbs_sample$mu_eap), 
+      Post.mean = c(gibbs_sample$parameters$sigma_eap, gibbs_sample$parameters$mu_eap), 
       HDI.lower = c(hdi_intervals[1, index_sigma], hdi_intervals[1, index_mu]), 
       HDI.upper = c(hdi_intervals[2, index_sigma], hdi_intervals[2, index_mu]), 
-      Inc.Prob = c(t(gibbs_sample$inclusion_probabilities), rep(1, length(gibbs_sample$mu_eap))), 
-      row.names = NULL
+      Inc.Prob = c(t(gibbs_sample$parameters$inclusion_probabilities), rep(1, length(gibbs_sample$parameters$mu_eap))), 
+      row.names = c(rownames(sigma_eap)[index_sigma], rownames(sigma_eap)[index_mu])
     )
   } else {
-    gibbs_sample$sigma_eap <- sigma_eap[index_sigma]
-    gibbs_sample$mu_eap <- sigma_eap[index_mu]
+    gibbs_sample$parameters$sigma_eap <- sigma_eap[index_sigma]
+    gibbs_sample$parameters$mu_eap <- sigma_eap[index_mu]
     fit_sample <- fit_pseudoposterior(x)
-    sigma_ci_upper <- gibbs_sample$sigma_eap + qnorm(.975)*fit_sample$sd.sigma[upper.tri(fit_sample$sd.sigma)]
-    sigma_ci_lower <- gibbs_sample$sigma_eap - qnorm(.975)*fit_sample$sd.sigma[upper.tri(fit_sample$sd.sigma)]
-    mu_ci_upper <- gibbs_sample$mu_eap + qnorm(.975)*fit_sample$sd.mu
-    mu_ci_lower <- gibbs_sample$mu_eap - qnorm(.975)*fit_sample$sd.mu
-    gibbs_sample$sigma_ci <- cbind(sigma_ci_lower, sigma_ci_upper)
-    gibbs_sample$mu_ci <- cbind(mu_ci_lower, mu_ci_upper)
+    sigma_ci_upper <- gibbs_sample$parameters$sigma_eap + qnorm(.975)*fit_sample$sd.sigma[upper.tri(fit_sample$sd.sigma)]
+    sigma_ci_lower <- gibbs_sample$parameters$sigma_eap - qnorm(.975)*fit_sample$sd.sigma[upper.tri(fit_sample$sd.sigma)]
+    mu_ci_upper <- gibbs_sample$parameters$mu_eap + qnorm(.975)*fit_sample$sd.mu
+    mu_ci_lower <- gibbs_sample$parameters$mu_eap - qnorm(.975)*fit_sample$sd.mu
+    gibbs_sample$parameters$sigma_ci <- cbind(sigma_ci_lower, sigma_ci_upper)
+    gibbs_sample$parameters$mu_ci <- cbind(mu_ci_lower, mu_ci_upper)
+    inclusion_probabilities <- gibbs_sample$structure$posterior_probability %*% gibbs_sample$structure$structures
+    gibbs_sample$parameters$inclusion_probabilities <- inclusion_probabilities
+    gibbs_sample$parameters$inc_BF <- inclusion_probabilities/(1 - inclusion_probabilities)
     gibbs_sample$output_overview <- data.frame(
-      Post.mean = c(gibbs_sample$sigma_eap, gibbs_sample$mu_eap),  
+      Post.mean = c(gibbs_sample$parameters$sigma_eap, gibbs_sample$parameters$mu_eap),  
       CI.lower = c(sigma_ci_lower, mu_ci_lower),
       CI.upper = c(sigma_ci_upper, mu_ci_upper), 
-      Inc.Prob = c(t(gibbs_sample$inclusion_probabilities), rep(1, length(gibbs_sample$mu_eap)))
+      Inc.Prob = c(t(gibbs_sample$parameters$inclusion_probabilities), rep(1, length(gibbs_sample$parameters$mu_eap)))
       , row.names = c(rownames(sigma_eap)[index_sigma], rownames(sigma_eap)[index_mu]))
   }
   

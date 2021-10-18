@@ -6,6 +6,25 @@ nexpit <- function(phi) {
   return(exp(phi) / (1 + exp(phi)) ^ 2)
 }
 
+#Aux Function: turn vector into matrix
+vector_to_matrix <- function(vec, p, diag = F) {
+  m <- matrix(0, p, p)
+  m[lower.tri(m, diag = diag)] <- vec
+  m <- t(m)
+  m[lower.tri(m)] <- t(m)[lower.tri(m)]
+  return(m)
+}
+
+#Calculate 95% highest density interval 
+hdi_interval <- function(x) {
+  dx <- density(x)
+  dn <- cumsum(dx$y)/sum(dx$y)
+  li <- which(dn>=0.05)[1]
+  ui <- which(dn>=0.95)[1]
+  return(  dx$x[c(li,ui)])
+}
+
+
 #' Indexing matrix for converting parameter matrix to vector.
 #'
 #' The function \code{indexing} is used to convert the \code{p} by \code{p}
