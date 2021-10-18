@@ -61,7 +61,7 @@ plot_structure <- function(output, top_n = 3){
 }
 
 # plot for edge inclusion BF
-plot_edge_BF <- function(output, evidence_thresh = 10) {
+plot_edge_BF <- function(output, evidence_thresh = 10, ...) {
   
   if (!requireNamespace("qgraph", quietly = TRUE)) {
     stop("Package \"qgraph\" needed for this function to work. Please install it.",
@@ -79,15 +79,16 @@ plot_edge_BF <- function(output, evidence_thresh = 10) {
   qgraph::qgraph(matrix(1, ncol = output$nodes, nrow = output$nodes),
                  theme = "TeamFortress", 
                  color= c("#f0ae0e"),vsize = 14, repulsion = .9, maximum = 1,
-                 legend = F,label.cex = 1.2, edge.width = 6, 
-                 edge.color = graph_color # specifies the color of the edges
+                 legend = F, label.cex = 1.2, edge.width = 6, 
+                 edge.color = graph_color, # specifies the color of the edges
+                 ...
   )
 }
 
 # ---------------------------------------------------------------------------------------------------------------
 # Plot median probability model
 
-plot_mpm <- function(output, exc_prob = .5) {
+plot_mpm <- function(output, exc_prob = .5, ...) {
   
   if (!requireNamespace("qgraph", quietly = TRUE)) {
     stop("Package \"qgraph\" needed for this function to work. Please install it.",
@@ -105,7 +106,7 @@ plot_mpm <- function(output, exc_prob = .5) {
   # Plot
   qgraph::qgraph(graph, theme = "TeamFortress", 
                  color= c("#f0ae0e"), vsize = 14, repulsion = .9,
-                 maximum=1, legend = F,  label.cex = 1.2) 
+                 maximum=1, legend = F,  label.cex = 1.2, ...) 
   
 }
 
