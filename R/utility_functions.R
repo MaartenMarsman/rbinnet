@@ -101,12 +101,12 @@ set_spike_and_slab <- function (x, precision) {
   sigma_ml <- try(optimize_pseudoposterior(x = x,
                                            prior_var = Inf)$sigma,
                   silent = TRUE)
-  if(class(sigma_ml) != "try-error") {
+  if(class(sigma_ml)[1] != "try-error") {
     index <- indexing(p)
 
     inv_hessian <- try(invert_hessian(sigma = sigma_ml, index = index, x = x,
                                       prior_var = Inf), silent = TRUE)
-    if(class(inv_hessian) == "try-error") {
+    if(class(inv_hessian)[1] == "try-error") {
       stop("Could not compute unit information matrix.")
     }
   } else {

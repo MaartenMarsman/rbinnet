@@ -61,6 +61,14 @@
 #'   and \code{j} is excluded from the structures that are considered.
 #'   Used to screen promising edges with \code{\link{screen_edges}}.
 #'
+#' @param components One of "normal", "t", or "laplace". The type of
+#'   distribution that is used in the spike and slab set-up. The variance
+#'   of the slab component is matched to \code{slab_var}. Defaults to
+#'   \code{components = "normal"}.
+#'
+#' @param df Used with \code{components = "t"}. The prior degrees of
+#'   freedom used in the T distribution. Defaults to \code{df = 5}.
+#'
 #' @return A list that contains \code{structures}, an \code{S} by
 #'   \code{p(p-1)/2} matrix of binary variables that encodes the \code{S}
 #'   structures that were visited by the Gibbs sampler. Also included is
@@ -77,15 +85,19 @@
 #'   by \code{1} matrix \code{sigma_eap} of posterior means of the Ising model
 #'   parameters, and if \code{hierarchical = TRUE}, it also includes
 #'   \code{theta_eap}, the posterior mean of the prior inclusion probability.
-structure_selection_ssvs <- function(x, number_iterations = 1e5, number_burnin_iterations = 0,
+structure_selection_ssvs <- function(x, number_iterations = 1e5,
+                 number_burnin_iterations = 0,
                  spike_var, slab_var, prior_var_intercepts,
                  hierarchical = FALSE, alpha = 1, beta = 1, theta = 0.5,
-                 output_samples = FALSE, sigma, include) {
+                 output_samples = FALSE, sigma, include,
+                 components, df) {
 
   if (!requireNamespace("pgdraw", quietly = TRUE)) {
     stop("Package `pgdraw' is needed for simulating Polya-Gamma variates. Please install it.", call. = FALSE)
   }
-
+  if (!requireNamespace("statmod", quietly = TRUE)) {
+    stop("Package `statmod' is needed for simulating inverse Gaussian variates. Please install it.", call. = FALSE)
+  }
   p <- ncol(x)
   n <- nrow(x)
   sufC <- colSums(x)
@@ -94,6 +106,11 @@ structure_selection_ssvs <- function(x, number_iterations = 1e5, number_burnin_i
     number_edges <- sum(include[lower.tri(include)])
   } else {
     number_edges <- choose(p, 2)
+  }
+
+  # prior specification -------------------------------------------------------
+  if(components != "normal") {
+    r <- spike_var[1, 2] / slab_var[1, 2]
   }
 
   # starting values -----------------------------------------------------------
@@ -150,13 +167,12 @@ structure_selection_ssvs <- function(x, number_iterations = 1e5, number_burnin_i
         # if edge is not screened ---------------------------------------------
         if(include[s, t] == 1) {
           # sample inclusion variable -----------------------------------------
-          tmp1 <- theta * dnorm(x = sigma[s, t],
-                                mean = 0,
-                                sd = sqrt(slab_var[s, t]))
-          tmp2 <- (1 - theta) * dnorm(x = sigma[s, t],
-                                      mean = 0,
-                                      sd = sqrt(spike_var[s, t]))
-          probability <-  tmp1 / (tmp1 + tmp2)
+          tmp1 <- theta / (1 - theta)
+          v1 <- slab_var[s, t]
+          v0 <- spike_var[s, t]
+          tmp2 <- (1/v1 - 1/v0) * sigma[s, t] ^ 2 / 2
+          probability <- tmp1 / (tmp1 + sqrt(v1 / v0) * exp(tmp2))
+
           gamma[s, t] <- rbinom(n = 1, size = 1, prob = probability)
           gamma[t, s] <- gamma[s, t]
 
@@ -177,6 +193,35 @@ structure_selection_ssvs <- function(x, number_iterations = 1e5, number_burnin_i
                                mean = post_mean,
                                sd = sqrt(post_var))
           sigma[t, s] <- sigma[s, t]
+
+          #sample hierarchical variance ---------------------------------------
+          if(components != "normal") {
+            if(components == "t") {
+              #slab_var[t, s] is fixed at n * Var(sigma[s, t]) ----------------
+              a <- df
+              b <- slab_var[t, s] * (a - 1)
+              rr <- gamma[s, t] + (1 - gamma[s, t]) * r
+              phi <- 1 / rgamma(n = 1,
+                                shape = a + 0.5,
+                                rate = b + sigma[s, t] ^ 2 / (2 * rr))
+              #update subdiagonal elements of spike / slab variance matrices --
+              spike_var[s, t] <- r * phi
+              slab_var[s, t] <- phi
+            }
+            if(components == "laplace") {
+              #slab_var[t, s] is fixed at n * Var(sigma[s, t]) ----------------
+              lambda <- sqrt(slab_var[t, s] / 2)
+              rr <- gamma[s, t] + (1 - gamma[s, t]) * r
+
+              phi <- 1 / statmod::rinvgauss(n = 1,
+                                            mean = sqrt(rr) /
+                                              (lambda * abs(sigma[s, t])),
+                                            shape = 1 / lambda ^ 2)
+              #update subdiagonal elements of spike and slab variance matrices --
+              spike_var[s, t] <- r * phi
+              slab_var[s, t] <- phi
+            }
+          }
         }
       }
     }
@@ -339,7 +384,8 @@ select_structure <- function(x, spike_var, slab_var, theta = 0.5, alpha = 1,
                              number_iterations = 1e5,
                              number_burnin_iterations = 1e2,
                              prior_var_intercepts = 1, output_samples = FALSE,
-                             sigma, include, precision = .975) {
+                             sigma, include, precision = .975,
+                             components = "normal", df = 5) {
   if(!hasArg("x"))
     stop("No data.", call. = FALSE)
 
@@ -348,7 +394,7 @@ select_structure <- function(x, spike_var, slab_var, theta = 0.5, alpha = 1,
                                               precision = precision),
                           silent = TRUE)
     if(class(spike_and_slab) == "try-error") {
-      stop("Could not set spike and slab parameters.", .call = FALSE)
+      stop("Could not set spike and slab parameters.", .call. = FALSE)
     }
     spike_var <- spike_and_slab$spike_var
     slab_var <- spike_and_slab$slab_var
@@ -364,7 +410,7 @@ select_structure <- function(x, spike_var, slab_var, theta = 0.5, alpha = 1,
                          hierarchical = hierarchical, alpha = alpha,
                          beta = beta, theta = theta,
                          output_samples = output_samples, sigma = sigma,
-                         include = include)
+                         include = include, components = components, df = df)
   }
 
   if(hasArg("sigma") & !hasArg("include")) {
@@ -376,7 +422,7 @@ select_structure <- function(x, spike_var, slab_var, theta = 0.5, alpha = 1,
                          hierarchical = hierarchical, alpha = alpha,
                          beta = beta, theta = theta,
                          output_samples = output_samples,
-                         sigma = sigma)
+                         sigma = sigma, components = components, df = df)
   }
 
   if(!hasArg("sigma")) {
@@ -386,7 +432,8 @@ select_structure <- function(x, spike_var, slab_var, theta = 0.5, alpha = 1,
                          prior_var_intercepts = prior_var_intercepts,
                          hierarchical = hierarchical, alpha = alpha,
                          beta = beta, theta = theta,
-                         output_samples = output_samples)
+                         output_samples = output_samples,
+                         components = components, df = df)
   }
 
   return(gibbs_sample)

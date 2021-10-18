@@ -17,7 +17,9 @@ structure_selection_ssvs(
   theta = 0.5,
   output_samples = FALSE,
   sigma,
-  include
+  include,
+  components,
+  df
 )
 }
 \arguments{
@@ -73,6 +75,14 @@ inclusion variable \code{gamma[i,j]} and the association \code{sigma[i,j]}
 are fixed to zero, which means that the edge between nodes \code{i}
 and \code{j} is excluded from the structures that are considered.
 Used to screen promising edges with \code{\link{screen_edges}}.}
+
+\item{components}{One of "normal", "t", or "laplace". The type of
+distribution that is used in the spike and slab set-up. The variance
+of the slab component is matched to \code{slab_var}. Defaults to
+\code{components = "normal"}.}
+
+\item{df}{Used with \code{components = "t"}. The prior degrees of
+freedom used in the T distribution. Defaults to \code{df = 5}.}
 }
 \value{
 A list that contains \code{structures}, an \code{S} by

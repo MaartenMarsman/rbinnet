@@ -2,7 +2,7 @@ Package: rbinnet
 Type: Package
 Title: Bayesian Edge Screening and Structure Selection for Networks of Binary 
   Variables
-Version: 0.0.0.9000
+Version: 0.0.0.9001
 Authors@R: c(person("Maarten", "Marsman", email = "m.marsman@uva.nl", 
   role = c("aut", "cre")), person("Karoline", "Huth", email = "k.huth@uva.nl",
   role = "ctb"))
@@ -26,5 +26,6 @@ LazyData: true
 Suggests: 
     pgdraw,
     IsingSampler,
-    qgraph
-RoxygenNote: 7.1.1
+    qgraph,
+    statmod
+RoxygenNote: 7.1.2

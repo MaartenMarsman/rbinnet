@@ -398,13 +398,13 @@ compute_standard_deviation <- function(x, sigma, prior_var = 1) {
 fit_pseudoposterior <- function(x, prior_var = 1, iteration_max = 1e2) {
 
   if(!exists("x"))
-    stop("Data matrix should be provided in x.", call = FALSE)
+    stop("Data matrix should be provided in x.", call. = FALSE)
 
   if(length(prior_var) != 1)
-    stop("A single prior variance should be specified", call = FALSE)
+    stop("A single prior variance should be specified", call. = FALSE)
 
   if(prior_var <= 0)
-    stop("Prior variance should be positive number.", call = FALSE)
+    stop("Prior variance should be positive number.", call. = FALSE)
 
   estimates <- try(optimize_pseudoposterior(x = x,
                                             prior_var = prior_var,
@@ -419,11 +419,11 @@ fit_pseudoposterior <- function(x, prior_var = 1, iteration_max = 1e2) {
       diag(sd.sigma) <- 0
     } else {
       warning("Asymptotic standard deviations could not be computed.",
-              call = FALSE)
+              call. = FALSE)
     }
   } else {
     stop("Estimation failed for unknown reasons. Try ``optimize_pseudoposterior'' directly or contact the author.",
-         call = FALSE)
+         call. = FALSE)
   }
   mu <- diag(estimates)
   diag(estimates) <- 0

@@ -18,7 +18,9 @@ select_structure(
   output_samples = FALSE,
   sigma,
   include,
-  precision = 0.975
+  precision = 0.975,
+  components = "normal",
+  df = 5
 )
 }
 \arguments{
@@ -86,6 +88,14 @@ Used to screen promising edges with \code{\link{screen_edges}}.}
 desired for edge selection. Equal to one minus the desired type-1 error.
 Needs to be specified if \code{spike_var} and \code{slab_var} are
 unspecified. Defaults to \code{.975}.}
+
+\item{components}{One of "normal", "t", or "laplace". The type of
+distribution that is used in the spike and slab set-up. The variance
+of the slab component is matched to \code{slab_var}. Defaults to
+\code{components = "normal"}.}
+
+\item{df}{Used with \code{components = "t"}. The prior degrees of
+freedom used in the T distribution. Defaults to \code{df = 5}.}
 }
 \value{
 A list that contains \code{structures}, an \code{S} by
