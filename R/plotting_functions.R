@@ -1,4 +1,19 @@
-# Plot Structure probabilities
+#' Plot posterior likelihood distribution of all structures
+#'
+#' The function is based in the ggplot2 environment and plots the posterior likelihood
+#' of the structures sorted from the most to the least probable. The function can either
+#' plot the raw posterior probabilities or transformed as Bayes Factors depicting the 
+#' Bayes Factor of the respective structure against the most probable structure. 
+#' 
+#' Additional arguments can be passed to the function using by adding + and the common 
+#' ggplot2 commands.
+#'
+#' @param output Output of the rbinnet \code{select_structure} function
+#' @param as.BF Determines if the raw posterior probabilities are plotted or the transformed Bayes Factor
+#'
+#' @return Plot of the posterior likelihood of the structures. 
+
+
 plot_structure_probability <- function(output, as.BF = TRUE) {
   
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
@@ -39,7 +54,20 @@ plot_structure_probability <- function(output, as.BF = TRUE) {
 # ---------------------------------------------------------------------------------------------------------------
 # Plot most probable structure
 
-plot_structure <- function(output, top_n = 3){
+#' Most probable structures plot.
+#' 
+#' The function plots the network of the most probable structures.
+#' 
+#' This function uses \code{qgraph} for the visualization of the network. 
+#' Additional arguments from the \code{qgraph} package can be passed on within this function.  
+#' 
+#' @param output Output of the rbinnet \code{select_structure} function
+#' @param top_n Number of most probable structures plotted.
+#' @param ... Additional arguments to be passed on to qgraph
+#'
+#' @return Network plot of most probable structures.
+ 
+plot_structure <- function(output, top_n = 3, ...){
   
   if (!requireNamespace("qgraph", quietly = TRUE)) {
     stop("Package \"qgraph\" needed for this function to work. Please install it.",
@@ -54,13 +82,30 @@ plot_structure <- function(output, top_n = 3){
     diag(graph_structure) <- 1
     
     qgraph::qgraph(graph_structure, layout = "circle", theme = "TeamFortress", 
-                   color= c("#f0ae0e"), vsize = 8, repulsion = .9,
-                   legend = F, legend.cex = 0.55, 
-                   title = paste("Posterior Probability = ", output$structure$posterior_probability[index])) 
+                   title = paste("Posterior Probability = ", output$structure$posterior_probability[index]), 
+                   ...) 
   }
 }
 
+# ---------------------------------------------------------------------------------------------------------------
 # plot for edge inclusion BF
+
+#' Inclusion evidence of edges plot.
+#' 
+#' The function creates a network showing the evidential strength for inclusion /exclusion. 
+#' Red edges indicate evidence for exclusion, blue edges evidence for inclusion, and grey edges 
+#' absence of evidence with a Bayes Factor below the evidence threshold.
+#' 
+#' This function uses \code{qgraph} for the visualization of the network. 
+#' Additional arguments from the \code{qgraph} package can be passed on within this function.    
+#'
+#' @param output Output of the rbinnet \code{select_structure} function
+#' @param evidence_thresh numeric larger 1. Specifies the inclusion Bayes Factor above which
+#' edges are considered included. Default set to 10. The higher, the more conservative the evidence plot.  
+#' @param ... Additional arguments to be passed on to qgraph
+#'
+#' @return Function returns a network with edges indicating evidential strength for in-/exclusion.
+
 plot_edge_BF <- function(output, evidence_thresh = 10, ...) {
   
   if (!requireNamespace("qgraph", quietly = TRUE)) {
@@ -77,16 +122,33 @@ plot_edge_BF <- function(output, evidence_thresh = 10, ...) {
   graph_color[graph < (1/evidence_thresh)] <- "#990000"
   
   qgraph::qgraph(matrix(1, ncol = output$nodes, nrow = output$nodes),
-                 theme = "TeamFortress", 
-                 color= c("#f0ae0e"),vsize = 14, repulsion = .9, maximum = 1,
-                 legend = F, label.cex = 1.2, edge.width = 6, 
-                 edge.color = graph_color, # specifies the color of the edges
+                 theme = "TeamFortress", edge.width = 6, 
+                 edge.color = graph_color, # specifies the color of the edges, depending on inclusion probability
                  ...
   )
 }
 
 # ---------------------------------------------------------------------------------------------------------------
 # Plot median probability model
+
+#' Median probability model plot.
+#' 
+#' The function depicts the median probability structure of the Ising model, eliminating edges 
+#' with an inclusion probability below the specified \code{exc_prob}-parameter 
+#' (i.e., default set to exc_prob 0.5). Within the network, nodes represent the 
+#' variables of the dataset and lines the respective node interaction. The thicker 
+#' the line the stronger the interaction between two nodes.
+#' 
+#' This function uses \code{qgraph} for the visualization of the network. 
+#' Additional arguments from the \code{qgraph} package can be passed on within this function. 
+#'
+#' @param output Output of the rbinnet \code{select_structure} function
+#' @param exc_prob Number between 0 and 1. Specifies minimum inclusion probability for edges
+#' to be depicted in the network.
+#' @param ... Additional arguments to be passed on to qgraph
+#'
+
+
 
 plot_mpm <- function(output, exc_prob = .5, ...) {
   
@@ -104,14 +166,26 @@ plot_mpm <- function(output, exc_prob = .5, ...) {
   diag(graph) <- 1
   
   # Plot
-  qgraph::qgraph(graph, theme = "TeamFortress", 
-                 color= c("#f0ae0e"), vsize = 14, repulsion = .9,
-                 maximum=1, legend = F,  label.cex = 1.2, ...) 
+  qgraph::qgraph(graph, maximum=1, ...) 
   
 }
 
 # ---------------------------------------------------------------------------------------------------------------
 # HDI plot 
+
+#' Highest density interval of parameters plot.
+#' 
+#' The function plots the 95% highest density interval (HDI) of the posterior sample of the Ising
+#' parameters. Dots represent the median of the posterior distribution and lines the respective 
+#' 95% HDI. 
+#' 
+#' The function is based in the ggplot2 environment. Additional arguments can be passed on 
+#' using the common "+" notation and a respective ggplot command. 
+#'
+#' @param output Output of the rbinnet \code{select_structure} function
+#' @param thresholds binary Determines whether the threshold parameters should be plotted
+#'
+#' @return Forest plot depicting the median of parameters and their respective 95% HDI
 
 plot_parameter_HDI <- function(output, thresholds = F) {
   
@@ -154,6 +228,16 @@ plot_parameter_HDI <- function(output, thresholds = F) {
 
 # ---------------------------------------------------------------------------------------------------------------
 # Sigma samples
+
+#' Plot posterior distribution of the parameter samples.
+#' 
+#' The function plots the density of the posterior distribution of the parameter samples. 
+#'
+#' @param output Output of the rbinnet \code{select_structure} function
+#' @param parameter A vector stating which parameters of the model should be plotted. 
+#' Options "all", "sigma", and "mu". Default is set to "all"
+#'
+#' @return Depicts density plots of parameters' posterior distribution.
 
 plot_parameter_distribution <- function(output, parameter = c("all")){
   
