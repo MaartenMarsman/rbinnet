@@ -1,4 +1,4 @@
-Package: bIsing
+Package: rbinnet
 Type: Package
 Title: Bayesian Edge Screening and Structure Selection for Networks of Binary 
   Variables
