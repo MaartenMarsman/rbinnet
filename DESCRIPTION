@@ -24,8 +24,9 @@ License: GPL-3
 Encoding: UTF-8
 LazyData: true
 Suggests: 
-    pgdraw,
     IsingSampler,
+    ggplot2,
+    pgdraw,
     qgraph,
     statmod
 RoxygenNote: 7.1.2

@@ -409,7 +409,7 @@ fit_pseudoposterior <- function(x, prior_var = 1, iteration_max = 1e2) {
   estimates <- try(optimize_pseudoposterior(x = x,
                                             prior_var = prior_var,
                                             iteration_max = iteration_max)$sigma, silent = TRUE)
-  if(class(estimates) != "try-error") {
+  if(!inherits(estimates, what = "try-error")) {
     standard_deviation <- try(compute_standard_deviation(x = x,
                                                          sigma = estimates,
                                                          prior_var = prior_var), silent = TRUE)

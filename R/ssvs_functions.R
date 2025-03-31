@@ -86,12 +86,12 @@
 #'   parameters, and if \code{hierarchical = TRUE}, it also includes
 #'   \code{theta_eap}, the posterior mean of the prior inclusion probability.
 structure_selection_ssvs <- function(x, number_iterations = 1e5,
-                 number_burnin_iterations = 0,
-                 spike_var, slab_var, prior_var_intercepts,
-                 hierarchical = FALSE, alpha = 1, beta = 1, theta = 0.5,
-                 output_samples = FALSE, sigma, include,
-                 components, df) {
-
+                                     number_burnin_iterations = 0,
+                                     spike_var, slab_var, prior_var_intercepts,
+                                     hierarchical = FALSE, alpha = 1, beta = 1, theta = 0.5,
+                                     output_samples = FALSE, sigma, include,
+                                     components, df) {
+  
   if (!requireNamespace("pgdraw", quietly = TRUE)) {
     stop("Package `pgdraw' is needed for simulating Polya-Gamma variates. Please install it.", call. = FALSE)
   }
@@ -101,18 +101,18 @@ structure_selection_ssvs <- function(x, number_iterations = 1e5,
   p <- ncol(x)
   n <- nrow(x)
   sufC <- colSums(x)
-
+  
   if(hasArg("include")) {
     number_edges <- sum(include[lower.tri(include)])
   } else {
     number_edges <- choose(p, 2)
   }
-
+  
   # prior specification -------------------------------------------------------
   if(components != "normal") {
     r <- spike_var[1, 2] / slab_var[1, 2]
   }
-
+  
   # starting values -----------------------------------------------------------
   if(!hasArg("sigma")) {
     sigma <- matrix(0, nrow = p, ncol = p)
@@ -125,7 +125,7 @@ structure_selection_ssvs <- function(x, number_iterations = 1e5,
     diag(gamma) <- 0
   }
   omega <- matrix(0, nrow = n, ncol = p)
-
+  
   # parameter output (optional) -----------------------------------------------
   edge_names <- par_names <- matrix(0, nrow = p, ncol = p)
   for(s in 1:(p-1)) {
@@ -137,7 +137,7 @@ structure_selection_ssvs <- function(x, number_iterations = 1e5,
   diag(par_names) <-  paste("mu(", 1:p, ")", sep ="")
   if(output_samples == TRUE) {
     sigma_samples <- matrix(0, nrow = number_iterations, ncol = p + choose(p, 2))
-   colnames(sigma_samples) <- par_names[lower.tri(par_names, diag = TRUE)]
+    colnames(sigma_samples) <- par_names[lower.tri(par_names, diag = TRUE)]
     if(hierarchical == TRUE) {
       theta_samples <- matrix(0, nrow = number_iterations, ncol = 1)
     }
@@ -145,23 +145,23 @@ structure_selection_ssvs <- function(x, number_iterations = 1e5,
     sigma_mean <- sigma[lower.tri(sigma, diag = TRUE)]
     theta_mean <- theta
   }
-
+  
   for(iteration in (-number_burnin_iterations):number_iterations) {
     for(s in 1:p) {
       # sample polya-gamma variates -------------------------------------------
       chi <- x[, -s] %*% sigma[-s, s]
       omega[, s] <- pgdraw::pgdraw(b = 1, c = sigma[s, s] + chi)
-
+      
       # sample main effects ---------------------------------------------------
       post_var <- 1 + sum(omega[, s]) * prior_var_intercepts
       post_var <- prior_var_intercepts / post_var
-
+      
       post_mean <- sufC[s] - n / 2  - omega[, s] %*% chi
       post_mean <- post_var * post_mean
-
+      
       sigma[s, s] <- rnorm(n = 1, mean = post_mean, sd = sqrt(post_var))
     }
-
+    
     for(s in 1:(p - 1)) {
       for(t in (s + 1):p) {
         # if edge is not screened ---------------------------------------------
@@ -172,28 +172,28 @@ structure_selection_ssvs <- function(x, number_iterations = 1e5,
           v0 <- spike_var[s, t]
           tmp2 <- (1/v1 - 1/v0) * sigma[s, t] ^ 2 / 2
           probability <- tmp1 / (tmp1 + sqrt(v1 / v0) * exp(tmp2))
-
+          
           gamma[s, t] <- rbinom(n = 1, size = 1, prob = probability)
           gamma[t, s] <- gamma[s, t]
-
+          
           # sample interaction parameter --------------------------------------
           tmp1 <- slab_var[s, t] * gamma[s, t]
           tmp1 <- tmp1 + spike_var[s, t] * (1 - gamma[s, t])
           tmp2 <- omega[, s] %*% x[, t] + omega[, t] %*% x[, s]
           post_var <- tmp1 / (1 + tmp1 * tmp2)
-
+          
           post_mean <- 2 * x[, s] %*% x[, t] - sufC[s] / 2 - sufC[t] / 2
           tmp1 <- sigma[s, s] + x[, -c(s, t)] %*% sigma[-c(s, t), s]
           tmp2 <- sigma[t, t] + x[, -c(t, s)] %*% sigma[-c(t, s), t]
           post_mean <- post_mean - sum(omega[, s] * x[, t] * tmp1)
           post_mean <- post_mean - sum(omega[, t] * x[, s] * tmp2)
           post_mean <- post_var * post_mean
-
+          
           sigma[s, t] <- rnorm(n = 1,
                                mean = post_mean,
                                sd = sqrt(post_var))
           sigma[t, s] <- sigma[s, t]
-
+          
           #sample hierarchical variance ---------------------------------------
           if(components != "normal") {
             if(components == "t") {
@@ -212,7 +212,7 @@ structure_selection_ssvs <- function(x, number_iterations = 1e5,
               #slab_var[t, s] is fixed at n * Var(sigma[s, t]) ----------------
               lambda <- sqrt(slab_var[t, s] / 2)
               rr <- gamma[s, t] + (1 - gamma[s, t]) * r
-
+              
               phi <- 1 / statmod::rinvgauss(n = 1,
                                             mean = sqrt(rr) /
                                               (lambda * abs(sigma[s, t])),
@@ -225,14 +225,14 @@ structure_selection_ssvs <- function(x, number_iterations = 1e5,
         }
       }
     }
-
+    
     # sample prior inclusion probability --------------------------------------
     if(hierarchical == TRUE) {
       theta <- rbeta(n = 1,
                      shape1 = alpha + sum(gamma) / 2,
                      shape2 = beta + number_edges - sum(gamma) / 2)
     }
-
+    
     # collect output after burnin ---------------------------------------------
     if(iteration > 0) {
       if(output_samples == TRUE) {
@@ -243,16 +243,16 @@ structure_selection_ssvs <- function(x, number_iterations = 1e5,
       } else  {
         sigma_mean <- (iteration - 1) * sigma_mean / iteration +
           sigma[lower.tri(sigma, diag = TRUE)] / iteration
-
+        
         theta_mean <- (iteration - 1) * theta_mean / iteration +
           theta / iteration
       }
-
+      
       if(iteration == 1) {
         #if inclusion[s, t] == 0 then gamma[s, t] == 0 ------------------------
         structures <- matrix(data = 2 * gamma[lower.tri(gamma)] - 1,
                              nrow = 1, ncol = choose(p, 2))
-
+        
         posterior_probability <- 1
       } else {
         tmp_structure <- matrix(data = 2 * gamma[lower.tri(gamma)] - 1,
@@ -268,37 +268,48 @@ structure_selection_ssvs <- function(x, number_iterations = 1e5,
       }
     }
   }
-
+  
   # output --------------------------------------------------------------------
   posterior_probability <- posterior_probability / sum(posterior_probability)
   structures <- structures / 2 + .5
   colnames(structures) <- edge_names[lower.tri(edge_names)]
   if(output_samples == TRUE) {
     if(hierarchical == TRUE) {
-      output <- list(structures = structures,
-                     posterior_probability = posterior_probability,
-                     sigma_samples = sigma_samples, theta = theta_samples)
+      output <- list(nodes = p, observations = n, 
+                     structure = list(structures = structures,
+                                      posterior_probability = posterior_probability),
+                     parameters = list(sigma_samples = sigma_samples, 
+                                       sigma_eap = as.data.frame(apply(sigma_samples, 2, mean))),
+                     theta = theta_samples
+      )
     } else {
-      output <- list(structures = structures,
-                     posterior_probability = posterior_probability,
-                     sigma_samples = sigma_samples)
+      output <- list(nodes = p, observations = n, 
+                     structure = list(structures = structures,
+                                      posterior_probability = posterior_probability),
+                     parameters = list(sigma_samples = sigma_samples, 
+                                       sigma_eap = as.data.frame(apply(sigma_samples, 2, mean))) 
+      )
     }
   } else {
     sigma_mean <- matrix(sigma_mean, ncol = 1)
     row.names(sigma_mean) <- par_names[lower.tri(par_names, diag = TRUE)]
     if(hierarchical == TRUE) {
-      output <- list(structures = structures,
-                     posterior_probability = posterior_probability,
-                     sigma_eap = sigma_mean, theta_eap = theta_mean)
+      output <- list(nodes = p, observations = n, 
+                     structure = list(structures = structures,
+                                      posterior_probability = posterior_probability),
+                     parameters = list(sigma_eap = sigma_mean),
+                     theta_eap = theta_mean)
+      
     } else {
-      output <- list(structures = structures,
-                     posterior_probability = posterior_probability,
-                     sigma_eap = sigma_mean)
+      output <- list(nodes = p, observations = n, 
+                     structure = list(structures = structures,
+                                      posterior_probability = posterior_probability),
+                     parameters = list(sigma_eap = sigma_mean)
+      )
     }
   }
   return(output)
 }
-
 
 #' Bayesian structure selection for the Ising model.
 #'
@@ -388,7 +399,7 @@ select_structure <- function(x, spike_var, slab_var, theta = 0.5, alpha = 1,
                              components = "normal", df = 5) {
   if(!hasArg("x"))
     stop("No data.", call. = FALSE)
-
+  
   if(!hasArg("spike_var") | !hasArg("slab_var")) {
     spike_and_slab <- try(set_spike_and_slab (x = x,
                                               precision = precision),
@@ -400,41 +411,87 @@ select_structure <- function(x, spike_var, slab_var, theta = 0.5, alpha = 1,
     slab_var <- spike_and_slab$slab_var
     sigma <- spike_and_slab$sigma_ml
   }
-
+  
   if(hasArg("sigma") & hasArg("include")) {
     gibbs_sample <- structure_selection_ssvs(number_iterations = number_iterations,
-                         number_burnin_iterations =
-                           number_burnin_iterations, x = x,
-                         spike_var = spike_var, slab_var = slab_var,
-                         prior_var_intercepts = prior_var_intercepts,
-                         hierarchical = hierarchical, alpha = alpha,
-                         beta = beta, theta = theta,
-                         output_samples = output_samples, sigma = sigma,
-                         include = include, components = components, df = df)
+                                             number_burnin_iterations =
+                                               number_burnin_iterations, x = x,
+                                             spike_var = spike_var, slab_var = slab_var,
+                                             prior_var_intercepts = prior_var_intercepts,
+                                             hierarchical = hierarchical, alpha = alpha,
+                                             beta = beta, theta = theta,
+                                             output_samples = output_samples, sigma = sigma,
+                                             include = include, components = components, df = df)
   }
-
+  
   if(hasArg("sigma") & !hasArg("include")) {
     gibbs_sample <- structure_selection_ssvs(number_iterations = number_iterations,
-                         number_burnin_iterations =
-                           number_burnin_iterations,
-                         x = x, spike_var = spike_var, slab_var = slab_var,
-                         prior_var_intercepts = prior_var_intercepts,
-                         hierarchical = hierarchical, alpha = alpha,
-                         beta = beta, theta = theta,
-                         output_samples = output_samples,
-                         sigma = sigma, components = components, df = df)
+                                             number_burnin_iterations =
+                                               number_burnin_iterations,
+                                             x = x, spike_var = spike_var, slab_var = slab_var,
+                                             prior_var_intercepts = prior_var_intercepts,
+                                             hierarchical = hierarchical, alpha = alpha,
+                                             beta = beta, theta = theta,
+                                             output_samples = output_samples,
+                                             sigma = sigma, components = components, df = df)
   }
-
+  
   if(!hasArg("sigma")) {
     gibbs_sample <- structure_selection_ssvs(number_iterations = number_iterations,
-                         number_burnin_iterations = number_burnin_iterations,
-                         x = x, spike_var = spike_var, slab_var = slab_var,
-                         prior_var_intercepts = prior_var_intercepts,
-                         hierarchical = hierarchical, alpha = alpha,
-                         beta = beta, theta = theta,
-                         output_samples = output_samples,
-                         components = components, df = df)
+                                             number_burnin_iterations = number_burnin_iterations,
+                                             x = x, spike_var = spike_var, slab_var = slab_var,
+                                             prior_var_intercepts = prior_var_intercepts,
+                                             hierarchical = hierarchical, alpha = alpha,
+                                             beta = beta, theta = theta,
+                                             output_samples = output_samples,
+                                             components = components, df = df)
   }
-
+  
+  # Prepare output
+  sigma_eap <- gibbs_sample$parameters$sigma_eap
+  index_sigma <- grep('^s', rownames(sigma_eap))
+  index_mu <- grep('^m', rownames(sigma_eap))
+  
+  if(output_samples == TRUE){
+    gibbs_sample$parameters$sigma_eap <- sigma_eap[index_sigma, ]
+    gibbs_sample$parameters$mu_eap <- sigma_eap[index_mu, ]
+    
+    
+    hdi_intervals <- apply(gibbs_sample$parameters$sigma_samples, MARGIN = 2, FUN = hdi_interval)
+    gibbs_sample$parameters$sigma_hdi <- hdi_intervals[, index_sigma]
+    gibbs_sample$parameters$mu_hdi <- hdi_intervals[, index_mu]
+    inclusion_probabilities <- gibbs_sample$structure$posterior_probability %*% gibbs_sample$structure$structures
+    gibbs_sample$parameters$inclusion_probabilities <- inclusion_probabilities
+    gibbs_sample$parameters$inc_BF <- inclusion_probabilities/(1 - inclusion_probabilities)
+    
+    gibbs_sample$output_overview <- data.frame(
+      Post.mean = c(gibbs_sample$parameters$sigma_eap, gibbs_sample$parameters$mu_eap), 
+      HDI.lower = c(hdi_intervals[1, index_sigma], hdi_intervals[1, index_mu]), 
+      HDI.upper = c(hdi_intervals[2, index_sigma], hdi_intervals[2, index_mu]), 
+      Inc.Prob = c(t(gibbs_sample$parameters$inclusion_probabilities), rep(1, length(gibbs_sample$parameters$mu_eap))), 
+      row.names = c(rownames(sigma_eap)[index_sigma], rownames(sigma_eap)[index_mu])
+    )
+  } else {
+    gibbs_sample$parameters$sigma_eap <- sigma_eap[index_sigma]
+    gibbs_sample$parameters$mu_eap <- sigma_eap[index_mu]
+    fit_sample <- fit_pseudoposterior(x)
+    sigma_ci_upper <- gibbs_sample$parameters$sigma_eap + qnorm(.975)*fit_sample$sd.sigma[upper.tri(fit_sample$sd.sigma)]
+    sigma_ci_lower <- gibbs_sample$parameters$sigma_eap - qnorm(.975)*fit_sample$sd.sigma[upper.tri(fit_sample$sd.sigma)]
+    mu_ci_upper <- gibbs_sample$parameters$mu_eap + qnorm(.975)*fit_sample$sd.mu
+    mu_ci_lower <- gibbs_sample$parameters$mu_eap - qnorm(.975)*fit_sample$sd.mu
+    gibbs_sample$parameters$sigma_ci <- cbind(sigma_ci_lower, sigma_ci_upper)
+    gibbs_sample$parameters$mu_ci <- cbind(mu_ci_lower, mu_ci_upper)
+    inclusion_probabilities <- gibbs_sample$structure$posterior_probability %*% gibbs_sample$structure$structures
+    gibbs_sample$parameters$inclusion_probabilities <- inclusion_probabilities
+    gibbs_sample$parameters$inc_BF <- inclusion_probabilities/(1 - inclusion_probabilities)
+    gibbs_sample$output_overview <- data.frame(
+      Post.mean = c(gibbs_sample$parameters$sigma_eap, gibbs_sample$parameters$mu_eap),  
+      CI.lower = c(sigma_ci_lower, mu_ci_lower),
+      CI.upper = c(sigma_ci_upper, mu_ci_upper), 
+      Inc.Prob = c(t(gibbs_sample$parameters$inclusion_probabilities), rep(1, length(gibbs_sample$parameters$mu_eap)))
+      , row.names = c(rownames(sigma_eap)[index_sigma], rownames(sigma_eap)[index_mu]))
+  }
+  
+  print(gibbs_sample$output_overview)
   return(gibbs_sample)
 }
